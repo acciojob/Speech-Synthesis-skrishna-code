@@ -27,16 +27,171 @@
       <button id="speak">Speak</button>
 
     </div>
-
 <script>
   const msg = new SpeechSynthesisUtterance();
+
   let voices = [];
+
   const voicesDropdown = document.querySelector('[name="voice"]');
   const options = document.querySelectorAll('[type="range"], [name="text"]');
   const speakButton = document.querySelector('#speak');
   const stopButton = document.querySelector('#stop');
+  const textArea = document.querySelector('[name="text"]');
 
-  //Your code goes here
+
+  // ==========================================
+  // GET AND POPULATE VOICES
+  // ==========================================
+
+  function populateVoices() {
+    voices = speechSynthesis.getVoices();
+
+    // Always clear old options
+    voicesDropdown.innerHTML = "";
+
+    // If no voices are available
+    if (!voices || voices.length === 0) {
+      const option = document.createElement("option");
+
+      option.value = "";
+      option.textContent = "No voices available";
+
+      voicesDropdown.appendChild(option);
+
+      return;
+    }
+
+    // Add every available voice
+    voices.forEach((voice, index) => {
+      const option = document.createElement("option");
+
+      option.value = index;
+      option.textContent = `${voice.name} (${voice.lang})`;
+
+      voicesDropdown.appendChild(option);
+    });
+
+    // Set first voice as default
+    msg.voice = voices[0];
+  }
+
+
+  // ==========================================
+  // LOAD VOICES
+  // ==========================================
+
+  populateVoices();
+
+  speechSynthesis.onvoiceschanged = function () {
+    populateVoices();
+  };
+
+
+  // ==========================================
+  // VOICE SELECTION
+  // ==========================================
+
+  voicesDropdown.addEventListener("change", function () {
+
+    const selectedIndex = parseInt(this.value);
+
+    if (isNaN(selectedIndex) || !voices[selectedIndex]) {
+      return;
+    }
+
+    const wasSpeaking = speechSynthesis.speaking;
+
+    // Set the new voice
+    msg.voice = voices[selectedIndex];
+
+    // Restart speech if it was already speaking
+    if (wasSpeaking) {
+
+      speechSynthesis.cancel();
+
+      // Give the browser time to cancel the old utterance
+      setTimeout(function () {
+        speak();
+      }, 100);
+    }
+  });
+
+
+  // ==========================================
+  // RATE AND PITCH
+  // ==========================================
+
+  function setOption() {
+    msg[this.name] = parseFloat(this.value);
+  }
+
+  options.forEach(function (option) {
+    option.addEventListener("input", setOption);
+    option.addEventListener("change", setOption);
+  });
+
+
+  // ==========================================
+  // SPEAK
+  // ==========================================
+
+  function speak() {
+
+    const text = textArea.value.trim();
+
+    // Don't speak empty text
+    if (!text) {
+      return;
+    }
+
+    // Make sure voices are available
+    if (!voices || voices.length === 0) {
+      populateVoices();
+
+      if (voices.length === 0) {
+        return;
+      }
+    }
+
+    // Set text
+    msg.text = text;
+
+    // Make sure selected voice is used
+    const selectedIndex = parseInt(voicesDropdown.value);
+
+    if (!isNaN(selectedIndex) && voices[selectedIndex]) {
+      msg.voice = voices[selectedIndex];
+    }
+
+    // Speak
+    speechSynthesis.speak(msg);
+  }
+
+
+  // ==========================================
+  // SPEAK BUTTON
+  // ==========================================
+
+  speakButton.addEventListener("click", function () {
+    speak();
+  });
+
+
+  // ==========================================
+  // STOP BUTTON
+  // ==========================================
+
+  stopButton.addEventListener("click", function () {
+    speechSynthesis.cancel();
+  });
+
+
+  // ==========================================
+  // INITIAL SETTINGS
+  // ==========================================
+
+  msg.rate = 1;
+  msg.pitch = 1;
 </script>
 
 </body>
